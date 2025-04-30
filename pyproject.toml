@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.dynamic]
+version = {attr = "runce.__init__.__version__"}
+
+[project]
+name = "runce"
+dynamic = ["version"]
+description = "Ensure only one instance of your process runs at a time."
+authors = [{name = "Jet-Logic"}]
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+classifiers = [
+    "Operating System :: POSIX :: Linux",
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+]
+
+[project.scripts]
+runce = "runce.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/jet-logic/runce"
+Documentation = "https://github.com/jet-logic/runce#readme"
+Repository = "https://github.com/jet-logic/runce"
