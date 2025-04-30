@@ -127,14 +127,15 @@ def format_prep(f: str):
     return fn
 
 
-def _find(id: str, runs: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+def _find(id: str, runs: List[Dict[str, Any]], exact=False) -> Optional[Dict[str, Any]]:
     """Find a process by ID or partial match."""
     for x in runs:
         if x["name"] == id:
             return x
-    for x in runs:
-        if id in x["name"]:
-            return x
+    if not exact:
+        for x in runs:
+            if id in x["name"]:
+                return x
     return None
 
 
@@ -262,7 +263,7 @@ class Tail(Main):
 
             j > 1 and lines > 0 and print()
             if hf:
-                print(f"{self.p_open}{hf(x)}{self.p_close}", flush=True, file=stderr)
+                print(f"{self.p_open}{hf(x)}{self.p_close}", flush=True)
 
             if lines > 0:
                 # TODO: pythonify
@@ -273,7 +274,7 @@ class Tail(Main):
                             stdout.buffer.write(b"\t" + line)
                 else:
                     run(cmd)
-
+                stdout.flush()
             j += 1
 
 
@@ -293,7 +294,7 @@ class Run(Main):
         sp = Spawn()
 
         # Check for existing process first
-        e = _find(name, list(sp.all()))
+        e = _find(name, list(sp.all()), True)
         if e:
             hf = format_prep(r"🚨 Found: {name} PID:{pid}({pid_status})")
             print(hf(e), file=stderr)

@@ -107,10 +107,10 @@ def run_parallel_process_test(script_path, run_time=4):
                             break
                 print(x)
             assert len(ids) == 0
-        for x in (
-            run_rnce("tail", "un-1", "-n", "3", stdout_only=True).strip().splitlines()
-        ):
-            assert "Process 1 running" in x
+        assert (
+            "Process 1 running"
+            in run_rnce("tail", "un-1", "-n", "3", stdout_only=True).strip()
+        )
         for x in run_rnce(
             "tail", "run-3", "--tab", "-n", "4", "--header", "no"
         ).splitlines():
