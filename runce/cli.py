@@ -99,31 +99,30 @@ class Spawn:
                     logging.exception(f"Load failed {child!r}")
 
 
-def fprop(f: str):
-    """Create a property formatter function."""
+class FormatDict(dict):
+    def __missing__(self, key: str) -> str:
+        if key == "pid?":
+            return f'{self["pid"]}{"" if check_pid(self["pid"]) else "?👻"}'
+        elif key == "elapsed":
+            import time
 
-    class Default(dict):
-        def __missing__(self, key: str) -> str:
-            if key == "pid?":
-                return f'{self["pid"]}{"" if check_pid(self["pid"]) else "?👻"}'
-            elif key == "elapsed":
-                import time
+            return time.strftime("%H:%M:%S", time.gmtime(time.time() - self["started"]))
+        elif key == "command":
+            if isinstance(self["cmd"], str):
+                return self["cmd"]
+            return join(self["cmd"])
+        elif key == "pid_status":
+            return "✅ Running" if check_pid(self["pid"]) else "👻 Absent"
+        raise KeyError(f"No {key!r}")
 
-                return time.strftime(
-                    "%H:%M:%S", time.gmtime(time.time() - self["started"])
-                )
-            elif key == "command":
-                if isinstance(self["cmd"], str):
-                    return self["cmd"]
-                return join(self["cmd"])
-            elif key == "pid_status":
-                return "✅ Running" if check_pid(self["pid"]) else "👻 Absent"
-            # elif key == "singleton":
-            #     return "🔒"
-            raise KeyError(f"No {key!r}")
+    def __call__(self, *args: Any, **kwds: Any) -> Any:
+        return super().__call__(*args, **kwds)
+
+
+def format_prep(f: str):
 
     def fn(x: Dict[str, Any]) -> str:
-        return f.format_map(Default(x))
+        return f.format_map(FormatDict(x))
 
     return fn
 
@@ -203,7 +202,7 @@ class Status(Main):
         return super().init_argparse(argp)
 
     def start(self) -> None:
-        f = fprop(self.format)
+        f = format_prep(self.format)
         for d in _search(Spawn(), self.ids, no_record):
             print(f(d))
 
@@ -253,7 +252,7 @@ class Tail(Main):
         if self.format == "no":
             hf = None
         else:
-            hf = fprop(self.format or r"{pid?}: {name}")
+            hf = format_prep(self.format or r"{pid?}: {name}")
         lines = self.lines or 10
         j = 0
 
@@ -296,12 +295,12 @@ class Run(Main):
         # Check for existing process first
         e = _find(name, list(sp.all()))
         if e:
-            hf = fprop(r"🚨 Found: PID:{pid}({pid_status}) {name}")
+            hf = format_prep(r"🚨 Found: {name} PID:{pid}({pid_status})")
             print(hf(e), file=stderr)
         else:
             # Start new process
             e = sp.spawn(args, name, overwrite=self.overwrite, cwd=self.cwd)
-            hf = fprop(r"🚀 Started: PID:{pid}({pid_status}) {name}")
+            hf = format_prep(r"🚀 Started: {name} PID:{pid}({pid_status})")
             print(hf(e), file=stderr)
         assert e
 
@@ -315,7 +314,7 @@ class Run(Main):
 
         # Run post-command if specified
         if self.cmd_after:
-            cmd = fprop(self.cmd_after)(e)
+            cmd = format_prep(self.cmd_after)(e)
             run(cmd, shell=True, check=True)
 
 
@@ -333,7 +332,7 @@ class Ls(Main):
         return super().init_argparse(argp)
 
     def start(self) -> None:
-        f = fprop(self.format)
+        f = format_prep(self.format)
         print("PID\tName\tStatus\tElapsed\tCommand")
         print("───\t────\t──────\t───────\t───────")
         for d in Spawn().all():

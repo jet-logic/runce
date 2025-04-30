@@ -7,4 +7,4 @@ Ensures each command runs exactly once per unique ID.
 License: GPL-3.0
 """
 
-__version__ = "0.1.8"
+__version__ = "0.1.9"
