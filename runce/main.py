@@ -1,9 +1,9 @@
-from typing import TYPE_CHECKING, Any, Sequence
+from typing import TYPE_CHECKING
 
 __version__ = "0.0.0"
 if TYPE_CHECKING:
     import argparse
-    from typing import Sequence
+    from typing import Any, Sequence
 
 INVALID = object()
 
@@ -15,9 +15,7 @@ class Argument:
         self.args = args
         self.kwargs = kwargs
 
-    def _add(
-        self, name: str, type_: type, argp: "argparse.ArgumentParser", that: Any
-    ) -> None:
+    def _add(self, name: str, type_: type, argp: "argparse.ArgumentParser", that: "Any") -> None:
         """Add argument to parser."""
         args = []
         kwargs = {**self.kwargs}
@@ -26,15 +24,12 @@ class Argument:
         action = kwargs.get("action")
         const = kwargs.get("const")
         default = kwargs.get("default", INVALID)
+        # kind = type(default)
         # print(name, type_, that, "_add", action, flag_arg)
 
         if action is None:
             if const is not None:
-                kwargs["action"] = (
-                    "append_const"
-                    if type_ and issubclass(type_, list)
-                    else "store_const"
-                )
+                kwargs["action"] = "append_const" if type_ and issubclass(type_, list) else "store_const"
             elif type_ is None:
                 kwargs["action"] = "store"
             elif issubclass(type_, bool):
@@ -50,7 +45,7 @@ class Argument:
                 else:
                     assert default is INVALID or default is False
                     kwargs["action"] = "store_true"
-            elif issubclass(type_, list):
+            elif issubclass(type_, list) or isinstance(default, list):
                 if "nargs" not in kwargs:
                     kwargs["action"] = "append"
                 if "default" not in kwargs:
@@ -76,9 +71,7 @@ class Argument:
         else:
 
             def add_args(x: str) -> None:
-                args.append(
-                    x if x.startswith("-") else (f"--{x}" if len(x) > 1 else f"-{x}")
-                )
+                args.append(x if x.startswith("-") else (f"--{x}" if len(x) > 1 else f"-{x}"))
 
             for x in self.args:
                 if " " in x or "\t" in x:
@@ -94,7 +87,7 @@ class Argument:
         argp.add_argument(*args, **kwargs)
 
 
-def _arg_fields(inst: Any) -> Any:
+def _arg_fields(inst: "Any") -> "Any":
     for c in inst.__class__.__mro__:
         for k, v in tuple(c.__dict__.items()):
             if isinstance(v, Argument):
@@ -117,7 +110,7 @@ def flag(*args: str, **kwargs) -> Argument:
 class Main:
     """Base class for all CLI commands."""
 
-    def __getattr__(self, name: str) -> Any:
+    def __getattr__(self, name: str) -> "Any":
         if not name.startswith("_get_"):
             f = getattr(self, f"_get_{name}", None)
             if f:
@@ -128,13 +121,15 @@ class Main:
         try:
             m = super().__getattr__
         except AttributeError:
-            raise AttributeError(
-                f"{self.__class__.__name__} has no attribute {name}"
-            ) from None
+            raise AttributeError(f"{self.__class__.__name__} has no attribute {name}") from None
         else:
             return m(name)
 
-    def main(self, args: Sequence[str] = None, argp: "argparse.ArgumentParser" = None):
+    def main(
+        self,
+        args: "Sequence[str]|None" = None,
+        argp: "argparse.ArgumentParser|None" = None,
+    ):
         """Main entry point for the command."""
         if argp is None:
             argp = self.new_argparse()
@@ -161,9 +156,7 @@ class Main:
         for k, v, t in _arg_fields(self):
             v._add(k, t, argp, self)
 
-    def parse_arguments(
-        self, argp: "argparse.ArgumentParser", args: Sequence[str]
-    ) -> None:
+    def parse_arguments(self, argp: "argparse.ArgumentParser", args: "Sequence[str]|None") -> None:
         """Parse command line arguments."""
         sp = None
         for s, k in self.sub_args():
@@ -188,12 +181,12 @@ class Main:
                     for k, v, t in _arg_fields(s):
                         if k in m:
                             setattr(s, k, m[k])
-                    p = getattr(s, "_parent_arg", None)
-                    if p:
+                    q: "Main|None" = getattr(s, "_parent_arg", None)
+                    if q:
                         s.ready()
                         s.start()
                         s.done()
-                    s = p
+                    s = q
         else:
             argp.parse_args(args, self)
 
@@ -209,6 +202,6 @@ class Main:
         """Main command execution."""
         pass
 
-    def sub_args(self) -> Any:
+    def sub_args(self) -> "Any":
         """Yield subcommands."""
         yield None, {}
