@@ -1,4 +1,4 @@
-import pytest
+from runce.spawn import Spawn
 from runce.utils import slugify, get_base_name
 
 
@@ -18,3 +18,9 @@ def test_get_base_name():
     assert name1 == name2  # Same input produces same output
     assert name1 != name3  # Different input produces different output
     assert len(name1) <= 24 + 1 + 24  # Max length check
+
+
+def test_extra():
+    sp = Spawn()
+
+    assert sp.data_dir.parent.exists()

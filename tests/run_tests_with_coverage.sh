@@ -1,11 +1,14 @@
 #!/bin/bash
-# Clean previous coverage data
-rm -f /tmp/.coverage*
-rm -rf /tmp/runce_coverage
+NAME=runce
+DOCS=/tmp/"$NAME"_coverage
+export COVERAGE_FILE=/tmp/."$NAME"_coverage
+echo [$NAME] $DOCS
+rm -vf "$COVERAGE_FILE"*
+rm -vrf $DOCS
 
 # Run tests with coverage
 python -m pytest tests/ \
-  --cov=runce \
+  --cov=$NAME \
   --cov-append \
   --cov-report=term-missing
 
@@ -14,7 +17,7 @@ python -m coverage combine
 
 # Generate HTML report in /tmp
 python -m coverage html \
-  --directory=/tmp/runce_coverage \
-  --title="RunCE Coverage Report"
+  --directory="$DOCS" \
+  --title="$NAME Coverage Report"
 
-echo "Coverage report generated at: /tmp/runce_coverage/index.html"
+echo "Coverage report generated at: $DOCS/index.html"

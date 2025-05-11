@@ -5,16 +5,36 @@ from pathlib import Path
 from subprocess import DEVNULL, STDOUT, Popen
 from time import time
 from typing import Any, Dict
-from .config import Config
 from .utils import get_base_name
 
 
 class Spawn:
     """Process spawner with singleton enforcement."""
 
-    def __init__(self):
-        self.config = Config()
-        self.data_dir = self.config.data_dir
+    data_dir: Path
+
+    def __getattr__(self, name: str) -> object:
+        if not name.startswith("_get_"):
+            f = getattr(self, f"_get_{name}", None)
+            if f:
+                setattr(self, name, None)
+                v = f()
+                setattr(self, name, v)
+                return v
+        try:
+            m = super().__getattr__
+        except AttributeError:
+            raise AttributeError(
+                f"{self.__class__.__name__} has no attribute {name}"
+            ) from None
+        else:
+            return m(name)
+
+    def _get_data_dir(self):
+        from pathlib import Path
+        from tempfile import gettempdir
+
+        return Path(gettempdir()) / "runce.v1"
 
     def spawn(
         self,
@@ -24,10 +44,11 @@ class Spawn:
         overwrite: bool = False,
         out_file: str = "",
         err_file: str = "",
+        in_file: str = "",
         **po_kwa,
     ) -> Dict[str, Any]:
         """Spawn a new singleton process."""
-        self.config.ensure_data_dir()
+
         base_name = get_base_name(name)
         data_dir = self.data_dir
         data_dir.mkdir(parents=True, exist_ok=True)
@@ -35,15 +56,15 @@ class Spawn:
         run_file = data_dir / f"{base_name}.run.json"
         mode = "w" if overwrite else "x"
 
-        po_kwa.setdefault("start_new_session", True)
-        po_kwa.setdefault("close_fds", True)
-        po_kwa["stdin"] = DEVNULL
+        if in_file:
+            po_kwa["stdin"] = Path(in_file).open("rb")
 
         if not cmd:
-            from sys import stdin
-
             cmd = ["sh"]
-            po_kwa["stdin"] = stdin.buffer
+            if po_kwa.get("stdin") is None:
+                from sys import stdin
+
+                po_kwa["stdin"] = stdin.buffer
 
         if merged_output:
             so = se = Path(out_file) if out_file else data_dir / f"{base_name}.log"
@@ -54,6 +75,10 @@ class Spawn:
             se = Path(err_file) if err_file else data_dir / f"{base_name}.err.log"
             po_kwa["stdout"] = so.open(f"{mode}b")
             po_kwa["stderr"] = se.open(f"{mode}b")
+
+        po_kwa.setdefault("start_new_session", True)
+        po_kwa.setdefault("close_fds", True)
+        po_kwa.setdefault("stdin", DEVNULL)
 
         process_info = {
             "out": str(so),
