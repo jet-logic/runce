@@ -1,8 +1,6 @@
 import re
 import errno
 import hashlib
-from pathlib import Path
-from typing import Optional
 
 
 def slugify(value: str) -> str:

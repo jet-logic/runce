@@ -4,7 +4,6 @@ from uuid import uuid4
 from pathlib import Path
 from subprocess import DEVNULL, STDOUT, Popen
 from time import time
-from typing import Any, Dict
 from .utils import get_base_name
 
 
@@ -46,10 +45,11 @@ class Spawn:
         err_file: str = "",
         in_file: str = "",
         **po_kwa,
-    ) -> Dict[str, Any]:
+    ):
         """Spawn a new singleton process."""
 
-        base_name = get_base_name(name)
+        uuid = str(uuid4())
+        base_name = get_base_name(name) if name else uuid
         data_dir = self.data_dir
         data_dir.mkdir(parents=True, exist_ok=True)
 
@@ -84,14 +84,21 @@ class Spawn:
             "out": str(so),
             "err": str(se),
             "cmd": cmd,
-            "name": name,
+            "name": name or uuid,
             "started": time(),
-            "uuid": str(uuid4()),
+            "uuid": uuid,
         }
 
+        process_info["base_name"] = base_name
         process_info["pid"] = Popen(cmd, **po_kwa).pid
+        # print("PI", process_info)
+        return self.add_process(process_info)
 
-        with run_file.open(mode) as f:
+    def add_process(self, process_info: dict[str, object]):
+        """Insert a new process record."""
+        # print(process_info)
+        run_file = self.data_dir / f"{process_info['base_name']}.run.json"
+        with run_file.open("x") as f:
             dump(process_info, f, indent=True)
 
         return process_info
@@ -109,8 +116,15 @@ class Spawn:
             ):
                 try:
                     with child.open() as f:
-                        d: Dict[str, int | str] = load(f)
+                        d: dict[str, int | str] = load(f)
                         d["file"] = str(child)
                         yield d
                 except Exception as e:
-                    logging.exception(f"Load failed {child!r}")
+                    logging.exception(f"Load failed {child!r} {e!s}")
+
+    def find_name(self, name: str):
+        """Find a process by name"""
+        for x in self.all():
+            if x["name"] == name:
+                return x
+        return None

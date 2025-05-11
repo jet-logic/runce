@@ -127,6 +127,7 @@ def run_parallel_process_test(script_path, run_time=4):
             run_rnce("kill", pid)
         for proc in processes:
             proc.terminate()
+        run_rnce("clean")
 
 
 # Pytest entry point
