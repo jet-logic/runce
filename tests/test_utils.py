@@ -1,11 +1,11 @@
 from pathlib import Path
-import unittest
+from unittest import TestCase, main
 from runce.procdb import ProcessDB
 from runce.spawn import Spawn
 from runce.utils import slugify, get_base_name, look
 
 
-class TestUtils(unittest.TestCase):
+class TestUtils(TestCase):
     def test_slugify(self):
         self.assertEqual(slugify("Hello World!"), "Hello_World")
         self.assertEqual(slugify("test@example.com"), "test_example.com")
@@ -55,4 +55,4 @@ class TestUtils(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
+    main()

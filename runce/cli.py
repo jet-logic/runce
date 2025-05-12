@@ -40,7 +40,7 @@ def format_prep(f: str):
 
 
 def no_record(name):
-    print(f"🤷‍♂️ No record of {name!r}")
+    print(f"🤷‍ No record of {name!r}")
 
 
 def ambiguous(name):
@@ -72,7 +72,7 @@ class Status(Main):
     format: str = flag(
         "f",
         "format of entry line",
-        default="{pid}\t{name}\t{pid_status}\t{elapsed}\t{command}",
+        default="{pid}\t{pid_status}\t{elapsed} {name} {command}",
     )
 
     def init_argparse(self, argp: ArgumentParser) -> None:
@@ -107,9 +107,9 @@ class Kill(Main):
                         killpg(pgid, signal.SIGTERM)
                     pref = "💀 Killed"
                 except ProcessLookupError:
-                    pref = "👻 Not found"
+                    pref = "👻 No process"
                 finally:
-                    print(f'{pref} {x["pid"]} {x["name"]!r}')
+                    print(f'{pref} PID={x["pid"]} {x["name"]!r}')
                     if not self.dry_run and self.remove:
                         sp.drop(x)
 
@@ -162,7 +162,8 @@ class Run(Main):
     """Run a new singleton process."""
 
     args: list[str] = arg("ARG", nargs="*", metavar="arg")
-    run_id: str = flag("id", "unique run identifier (required)")
+    tail: int = flag("t", "tail", "tail the output with n lines", default=0)
+    run_id: str = flag("id", "unique run identifier", default="")
     cwd: str = flag("working directory")
     tail: int = flag("t", "tail", "tail the output with n lines", default=0)
     overwrite: bool = flag("overwrite", "overwrite existing entry", default=False)
@@ -171,20 +172,20 @@ class Run(Main):
 
     def start(self) -> None:
         args = self.args
-        name = self.run_id or " ".join(x for x in args)
+        name = self.run_id  # or " ".join(x for x in args)
         sp = Spawn()
 
         # Check for existing process first
-        e = sp.find_name(name)
+        e = sp.find_name(name) if name else None
         if e:
-            hf = format_prep(r"🚨 Found: {name} PID:{pid}({pid_status})")
+            hf = format_prep(r"🚨 Found: PID={pid} ({pid_status}) {name}")
             print(hf(e), file=stderr)
         else:
             # Start new process
             e = sp.spawn(
                 args, name, overwrite=self.overwrite, cwd=self.cwd, split=self.split
             )
-            hf = format_prep(r"🚀 Started: {name} PID:{pid}({pid_status})")
+            hf = format_prep("🚀 Started: PID={pid} ({pid_status}) {name}")
             print(hf(e), file=stderr)
         assert e
 

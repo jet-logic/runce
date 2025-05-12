@@ -1,7 +1,7 @@
 import unittest
 from typing import List, Dict, Any
 
-from runce.utils import look_multiple
+from runce.utils import generate_pseudowords, look_multiple, uuid_to_phonetic_words
 
 
 class TestLookMultiple(unittest.TestCase):
@@ -166,6 +166,15 @@ class TestLookMultiple(unittest.TestCase):
         self.assertEqual({r["name"] for r in results}, {"apple", "banana"})
         self.assertEqual(self.ambiguous_calls, [])
         self.assertEqual(self.not_found_calls, [])
+
+    def test_uuid_to_phonetic_words(self):
+        # from uuid import uuid4
+
+        # u = uuid4()
+        # print(f"Original UUID: {u}")
+        # print(f"Phonetic words: {uuid_to_phonetic_words(u)}")
+        print(generate_pseudowords(3, 3))
+        print(generate_pseudowords(3, 3))
 
 
 if __name__ == "__main__":

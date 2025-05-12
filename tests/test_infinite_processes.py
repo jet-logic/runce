@@ -25,10 +25,10 @@ done
 
 def run_parallel_process_test(script_path, run_time=4):
     """Core test logic that can be called from pytest or main"""
-    process_ids = [f"run-{i}" for i in range(1, 4)]
+    process_names = [f"run-{i}" for i in range(1, 4)]
     processes = []
 
-    def run_rnce(*args, stdout_only=False):
+    def run_runce(*args, stdout_only=False):
         """Helper to run python -m runce with stderr capture"""
         result = subprocess.run(
             ["python", "-m", "runce", *args],
@@ -43,10 +43,10 @@ def run_parallel_process_test(script_path, run_time=4):
         return result.stdout + result.stderr
 
     try:
-        run_rnce("clean")
+        run_runce("clean")
         # Launch 3 processes
         # print("process_ids", process_ids)
-        for pid in process_ids:
+        for pid in process_names:
             proc = subprocess.Popen(
                 [
                     "python",
@@ -69,15 +69,15 @@ def run_parallel_process_test(script_path, run_time=4):
 
         # print(run_rnce("list"))
         # Verify they're running
-        for pid in process_ids:
-            output = run_rnce("status", pid)
+        for pid in process_names:
+            output = run_runce("status", pid)
             # print("output", output, pid)
             assert pid in output
             assert "Running" in output
 
         # Test singleton behavior
-        for pid in process_ids:
-            output = run_rnce("run", "--id", pid, str(script_path), "dupe")
+        for pid in process_names:
+            output = run_runce("run", "--id", pid, str(script_path), "dupe")
             assert "found" in output.lower()
 
         # Let them run for specified time
@@ -85,21 +85,21 @@ def run_parallel_process_test(script_path, run_time=4):
         time.sleep(run_time)
 
         # Verify output
-        for pid in process_ids:
-            output = run_rnce("tail", pid, "-n", "2")
+        for pid in process_names:
+            output = run_runce("tail", pid, "-n", "2")
             assert "running" in output.lower()
-        run_rnce("kill", "run-2")
+        run_runce("kill", "run-2")
         if 1:
-            for x in run_rnce("status").strip().splitlines():
+            for x in run_runce("status").strip().splitlines():
                 if "Running" in x:
                     assert "run-1" in x or "run-3" in x
                 elif "Absent" in x:
                     assert "run-2" in x
                 print(x)
-        run_rnce("restart", "run-2")
+        run_runce("restart", "run-2")
         if 1:
-            ids = list(process_ids)
-            for x in run_rnce("list").strip().splitlines():
+            ids = list(process_names)
+            for x in run_runce("list").strip().splitlines():
                 if "Running" in x:
                     for id in ids:
                         if id in x:
@@ -109,25 +109,25 @@ def run_parallel_process_test(script_path, run_time=4):
             assert len(ids) == 0
         assert (
             "Process 1 running"
-            in run_rnce("tail", "un-1", "-n", "3", stdout_only=True).strip()
+            in run_runce("tail", "un-1", "-n", "3", stdout_only=True).strip()
         )
-        for x in run_rnce(
+        for x in run_runce(
             "tail", "run-3", "--tab", "-n", "4", "--header", "no"
         ).splitlines():
             assert "Process 3 running" in x and x.startswith("\t")
-        run_rnce("kill", "run-1")
-        for x in run_rnce("clean").strip().splitlines():
+        run_runce("kill", "run-1")
+        for x in run_runce("clean").strip().splitlines():
             assert "Cleaning" in x and "1" in x
 
         return True
 
     finally:
         # Cleanup
-        for pid in process_ids:
-            run_rnce("kill", pid)
+        for pid in process_names:
+            run_runce("kill", pid)
         for proc in processes:
             proc.terminate()
-        run_rnce("clean")
+        run_runce("clean")
 
 
 # Pytest entry point

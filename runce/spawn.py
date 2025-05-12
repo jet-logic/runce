@@ -4,7 +4,7 @@ from uuid import uuid4
 from pathlib import Path
 from subprocess import DEVNULL, STDOUT, Popen
 from time import time
-from .utils import get_base_name, look_multiple
+from .utils import generate_pseudowords, get_base_name, look_multiple
 
 
 class Spawn:
@@ -49,11 +49,13 @@ class Spawn:
         """Spawn a new singleton process."""
 
         uuid = str(uuid4())
-        base_name = get_base_name(name) if name else uuid
+        if name:
+            base_name = get_base_name(name)
+        else:
+            name = base_name = generate_pseudowords(3, 3)
         data_dir = self.data_dir
         data_dir.mkdir(parents=True, exist_ok=True)
 
-        run_file = data_dir / f"{base_name}.run.json"
         mode = "w" if overwrite else "x"
 
         if in_file:
