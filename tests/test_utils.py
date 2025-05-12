@@ -1,41 +1,8 @@
 from pathlib import Path
-import pprint
-from time import sleep
 import unittest
 from runce.procdb import ProcessDB
 from runce.spawn import Spawn
-from runce.utils import slugify, get_base_name
-
-
-# def test_slugify():
-#     assert slugify("Hello World!") == "Hello_World"
-#     assert slugify("test@example.com") == "test_example.com"
-#     assert slugify("  extra  spaces  ") == "extra_spaces"
-#     assert slugify("special!@#$%^&*()chars") == "special_chars"
-#     # assert slugify("unicode-éèê") == "unicode_e_e_e"
-
-
-# def test_get_base_name():
-#     name1 = get_base_name("test")
-#     name2 = get_base_name("test")
-#     name3 = get_base_name("different")
-
-#     assert name1 == name2  # Same input produces same output
-#     assert name1 != name3  # Different input produces different output
-#     assert len(name1) <= 24 + 1 + 24  # Max length check
-
-
-# def test_extra():
-#     sp = Spawn()
-
-#     assert sp.data_dir.parent.exists()
-
-
-# def test_extra_2():
-#     pdb = ProcessDB()
-#     p = pdb.spawn(["bash", "-c", "echo 123"])
-
-#     # assert sp.data_dir.parent.exists()
+from runce.utils import slugify, get_base_name, look
 
 
 class TestUtils(unittest.TestCase):
@@ -58,6 +25,21 @@ class TestUtils(unittest.TestCase):
     def test_spawn_data_dir(self):
         sp = Spawn()
         self.assertTrue(sp.data_dir.parent.exists())
+
+    def test_look(self):
+        db = [
+            dict(name="apple"),
+            dict(name="banana"),
+            dict(name="carrot"),
+            dict(name="carpet"),
+        ]
+        self.assertIs(look("carpet", db), db[3])
+        self.assertIs(look("car", db), False)
+        self.assertIs(look("carr", db), db[2])
+        self.assertIs(look("e", db), False)
+        self.assertIs(look("le", db), db[0])
+        self.assertIs(look("citrus", db), None)
+        self.assertIs(look("b", db), db[1])
 
     def test_spawn_echo(self):
         pdb = ProcessDB()

@@ -128,3 +128,14 @@ class Spawn:
             if x["name"] == name:
                 return x
         return None
+
+    def drop(self, entry: dict[str, object], clean_up=True):
+        """Clean up files associated with a process."""
+        from os.path import isfile
+        from os import remove
+
+        for k in ("out", "err", "file"):
+            v = entry.get(k)
+            if v and isfile(v):
+                if clean_up or k == "file":
+                    remove(v)

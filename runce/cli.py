@@ -51,7 +51,7 @@ def _find(id: str, runs: List[Dict[str, Any]], exact=False) -> Optional[Dict[str
     return None
 
 
-def _search(sp: Spawn, ids: list[str], not_found: Optional[Any] = None) -> Any:
+def _search(sp: Spawn, ids: list[str], not_found: Optional[Any] = None):
     """Search for processes by IDs."""
     if ids:
         runs = list(sp.all())
@@ -65,17 +65,6 @@ def _search(sp: Spawn, ids: list[str], not_found: Optional[Any] = None) -> Any:
                     not_found(n)
     else:
         yield from sp.all()
-
-
-def _drop(entry: Dict[str, Any]) -> None:
-    """Clean up files associated with a process."""
-    from os.path import isfile
-    from os import remove
-
-    for k in ("out", "err", "file"):
-        v = entry.get(k)
-        if v and isfile(v):
-            remove(v)
 
 
 def no_record(name):
@@ -92,12 +81,13 @@ class Clean(Main):
         return super().add_arguments(argp)
 
     def start(self) -> None:
+        sp = Spawn()
 
-        for d in _search(Spawn(), self.ids, no_record):
+        for d in _search(sp, self.ids, no_record):
             if check_pid(d["pid"]):
                 continue
             print(f"🧹 Cleaning {d['pid']} {d['name']}")
-            _drop(d)
+            sp.drop(d)
 
 
 class Status(Main):
@@ -145,7 +135,7 @@ class Kill(Main):
             finally:
                 print(f'{pref} {x["pid"]} {x["name"]!r}')
                 if not self.dry_run and self.remove:
-                    _drop(x)
+                    sp.drop(x)
 
 
 class Tail(Main):
@@ -206,7 +196,7 @@ class Run(Main):
         sp = Spawn()
 
         # Check for existing process first
-        e = _find(name, list(sp.all()), True)
+        e = sp.find_name(name)
         if e:
             hf = format_prep(r"🚨 Found: {name} PID:{pid}({pid_status})")
             print(hf(e), file=stderr)
