@@ -39,36 +39,12 @@ def format_prep(f: str):
     return fn
 
 
-def _find(id: str, runs: List[Dict[str, Any]], exact=False) -> Optional[Dict[str, Any]]:
-    """Find a process by ID or partial match."""
-    for x in runs:
-        if x["name"] == id:
-            return x
-    if not exact:
-        for x in runs:
-            if id in x["name"]:
-                return x
-    return None
-
-
-def _search(sp: Spawn, ids: list[str], not_found: Optional[Any] = None):
-    """Search for processes by IDs."""
-    if ids:
-        runs = list(sp.all())
-        for n in ids:
-            x = _find(n, runs)
-            if x:
-                runs.remove(x)
-                yield x
-            else:
-                if not_found:
-                    not_found(n)
-    else:
-        yield from sp.all()
-
-
 def no_record(name):
     print(f"🤷‍♂️ No record of {name!r}")
+
+
+def ambiguous(name):
+    print(f"⁉️ {name!r} is ambiguous")
 
 
 class Clean(Main):
@@ -82,8 +58,7 @@ class Clean(Main):
 
     def start(self) -> None:
         sp = Spawn()
-
-        for d in _search(sp, self.ids, no_record):
+        for d in sp.find_names(self.ids, ambiguous, no_record):
             if check_pid(d["pid"]):
                 continue
             print(f"🧹 Cleaning {d['pid']} {d['name']}")
@@ -106,7 +81,7 @@ class Status(Main):
 
     def start(self) -> None:
         f = format_prep(self.format)
-        for d in _search(Spawn(), self.ids, no_record):
+        for d in Spawn().find_names(self.ids, ambiguous, no_record):
             print(f(d))
 
 
@@ -123,19 +98,20 @@ class Kill(Main):
 
     def start(self) -> None:
         sp = Spawn()
-        for x in _search(sp, self.ids, no_record):
-            pref = "❌ Error"
-            try:
-                pgid = getpgid(x["pid"])
-                if not self.dry_run:
-                    killpg(pgid, signal.SIGTERM)
-                pref = "💀 Killed"
-            except ProcessLookupError:
-                pref = "👻 Not found"
-            finally:
-                print(f'{pref} {x["pid"]} {x["name"]!r}')
-                if not self.dry_run and self.remove:
-                    sp.drop(x)
+        if self.ids:
+            for x in sp.find_names(self.ids, ambiguous, no_record):
+                pref = "❌ Error"
+                try:
+                    pgid = getpgid(x["pid"])
+                    if not self.dry_run:
+                        killpg(pgid, signal.SIGTERM)
+                    pref = "💀 Killed"
+                except ProcessLookupError:
+                    pref = "👻 Not found"
+                finally:
+                    print(f'{pref} {x["pid"]} {x["name"]!r}')
+                    if not self.dry_run and self.remove:
+                        sp.drop(x)
 
 
 class Tail(Main):
@@ -148,6 +124,7 @@ class Tail(Main):
         "x", "only-existing", "only show existing processes", default=False
     )
     tab: bool = flag("t", "tab", "prefix tab space", default=False)
+    err: bool = flag("e", "err", "oputput the stderr", default=False)
     p_open: str = "📜 "
     p_close: str = ""
 
@@ -158,8 +135,9 @@ class Tail(Main):
             hf = format_prep(self.format or r"{pid?}: {name}")
         lines = self.lines or 10
         j = 0
+        out = "err" if self.err else "out"
 
-        for x in _search(Spawn(), self.ids, no_record):
+        for x in Spawn().find_names(self.ids, ambiguous, no_record):
             if self.existing and not check_pid(x["pid"]):
                 continue
 
@@ -169,7 +147,7 @@ class Tail(Main):
 
             if lines > 0:
                 # TODO: pythonify
-                cmd = ["tail", "-n", str(lines), x["out"]]
+                cmd = ["tail", "-n", str(lines), x[out]]
                 if self.tab:
                     with Popen(cmd, stdout=PIPE).stdout as o:
                         for line in o:
@@ -189,6 +167,7 @@ class Run(Main):
     tail: int = flag("t", "tail", "tail the output with n lines", default=0)
     overwrite: bool = flag("overwrite", "overwrite existing entry", default=False)
     cmd_after: str = flag("run-after", "run command after", metavar="command")
+    split: bool = flag("split", "dont merge stdout and stderr", default=False)
 
     def start(self) -> None:
         args = self.args
@@ -202,7 +181,9 @@ class Run(Main):
             print(hf(e), file=stderr)
         else:
             # Start new process
-            e = sp.spawn(args, name, overwrite=self.overwrite, cwd=self.cwd)
+            e = sp.spawn(
+                args, name, overwrite=self.overwrite, cwd=self.cwd, split=self.split
+            )
             hf = format_prep(r"🚀 Started: {name} PID:{pid}({pid_status})")
             print(hf(e), file=stderr)
         assert e
@@ -254,11 +235,12 @@ class Restart(Main):
 
     def start(self) -> None:
         sp = Spawn()
-        for proc in _search(Spawn(), self.ids, no_record):
-            # First kill existing process
-            Kill().main(["--remove", proc["name"]])
-            # Then restart with same parameters
-            Run().main(["--id", proc["name"], "-t", self.tail, *proc["cmd"]])
+        if self.ids:
+            for proc in sp.find_names(self.ids, ambiguous, no_record):
+                # First kill existing process
+                Kill().main(["--remove", proc["name"]])
+                # Then restart with same parameters
+                Run().main(["--id", proc["name"], "-t", self.tail, *proc["cmd"]])
 
 
 class App(Main):

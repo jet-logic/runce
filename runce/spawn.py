@@ -4,7 +4,7 @@ from uuid import uuid4
 from pathlib import Path
 from subprocess import DEVNULL, STDOUT, Popen
 from time import time
-from .utils import get_base_name
+from .utils import get_base_name, look_multiple
 
 
 class Spawn:
@@ -39,7 +39,7 @@ class Spawn:
         self,
         cmd: list[str] = [],
         name: str = "",
-        merged_output: bool = True,
+        split: bool = False,
         overwrite: bool = False,
         out_file: str = "",
         err_file: str = "",
@@ -66,15 +66,15 @@ class Spawn:
 
                 po_kwa["stdin"] = stdin.buffer
 
-        if merged_output:
-            so = se = Path(out_file) if out_file else data_dir / f"{base_name}.log"
-            po_kwa["stdout"] = so.open(f"{mode}b")
-            po_kwa["stderr"] = STDOUT
-        else:
+        if split:
             so = Path(out_file) if out_file else data_dir / f"{base_name}.out.log"
             se = Path(err_file) if err_file else data_dir / f"{base_name}.err.log"
             po_kwa["stdout"] = so.open(f"{mode}b")
             po_kwa["stderr"] = se.open(f"{mode}b")
+        else:
+            so = se = Path(out_file) if out_file else data_dir / f"{base_name}.log"
+            po_kwa["stdout"] = so.open(f"{mode}b")
+            po_kwa["stderr"] = STDOUT
 
         po_kwa.setdefault("start_new_session", True)
         po_kwa.setdefault("close_fds", True)
@@ -139,3 +139,11 @@ class Spawn:
             if v and isfile(v):
                 if clean_up or k == "file":
                     remove(v)
+
+    def find_names(
+        self, names: list[str], ambiguous=lambda x: None, not_found=lambda x: None
+    ):
+        if names:
+            yield from look_multiple(names, self.all(), ambiguous, not_found)
+        else:
+            yield from self.all()

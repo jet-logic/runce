@@ -43,19 +43,13 @@ class TestUtils(unittest.TestCase):
 
     def test_spawn_echo(self):
         pdb = ProcessDB()
-        p = pdb.spawn(
-            ["bash", "-c", "echo -n 123; echo -n 456 >&2"], merged_output=False
-        )
+        p = pdb.spawn(["bash", "-c", "echo -n 123; echo -n 456 >&2"], split=True)
         a = pdb.find_name(p["name"])
         self.assertTrue(a)
         self.assertEqual(Path(a["out"]).read_text(), "123")
         self.assertEqual(Path(a["err"]).read_text(), "456")
         self.assertIsNone(pdb.find_name("!@#"))
-        b = pdb.spawn(
-            ["cat", "-"],
-            merged_output=False,
-            in_file=a["err"],
-        )
+        b = pdb.spawn(["cat", "-"], split=True, in_file=a["err"])
         self.assertEqual(Path(b["out"]).read_text(), "456", b["name"])
         self.assertEqual(Path(b["err"]).read_text(), "", b["name"])
 
