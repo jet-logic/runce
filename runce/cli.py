@@ -1,14 +1,17 @@
 import signal
 from argparse import ArgumentParser
-from subprocess import Popen, PIPE, run
-from typing import List, Dict, Any, Optional
+from shlex import join
 from sys import stderr, stdout
 from os import getpgid, killpg
-from shlex import join
 from shutil import copyfileobj
-from .spawn import Spawn
+from subprocess import Popen, PIPE, run
+from typing import Dict, Any
 from .utils import check_pid
 from .main import Main, flag, arg
+
+from .procdb import ProcessDB as Manager
+
+# from .spawn import Spawn as Manager
 
 
 class FormatDict(dict):
@@ -24,11 +27,8 @@ class FormatDict(dict):
                 return self["cmd"]
             return join(self["cmd"])
         elif key == "pid_status":
-            return "✅ Running" if check_pid(self["pid"]) else "👻 Absent"
+            return "✅ Live" if check_pid(self["pid"]) else "❌ Gone"
         raise KeyError(f"No {key!r}")
-
-    def __call__(self, *args: Any, **kwds: Any) -> Any:
-        return super().__call__(*args, **kwds)
 
 
 def format_prep(f: str):
@@ -57,7 +57,7 @@ class Clean(Main):
         return super().add_arguments(argp)
 
     def start(self) -> None:
-        sp = Spawn()
+        sp = Manager()
         for d in sp.find_names(self.ids, ambiguous, no_record):
             if check_pid(d["pid"]):
                 continue
@@ -81,7 +81,7 @@ class Status(Main):
 
     def start(self) -> None:
         f = format_prep(self.format)
-        for d in Spawn().find_names(self.ids, ambiguous, no_record):
+        for d in Manager().find_names(self.ids, ambiguous, no_record):
             print(f(d))
 
 
@@ -97,7 +97,7 @@ class Kill(Main):
         return super().init_argparse(argp)
 
     def start(self) -> None:
-        sp = Spawn()
+        sp = Manager()
         if self.ids:
             for x in sp.find_names(self.ids, ambiguous, no_record):
                 pref = "❌ Error"
@@ -137,7 +137,7 @@ class Tail(Main):
         j = 0
         out = "err" if self.err else "out"
 
-        for x in Spawn().find_names(self.ids, ambiguous, no_record):
+        for x in Manager().find_names(self.ids, ambiguous, no_record):
             if self.existing and not check_pid(x["pid"]):
                 continue
 
@@ -173,7 +173,7 @@ class Run(Main):
     def start(self) -> None:
         args = self.args
         name = self.run_id  # or " ".join(x for x in args)
-        sp = Spawn()
+        sp = Manager()
 
         # Check for existing process first
         e = sp.find_name(name) if name else None
@@ -209,7 +209,7 @@ class Ls(Main):
     format: str = flag(
         "f",
         "format of entry line",
-        default="{pid}\t{name}\t{pid_status}\t{elapsed}\t{command}",
+        default="{pid_status} {elapsed} {pid}\t{name}, {command}",
     )
 
     def init_argparse(self, argp: ArgumentParser) -> None:
@@ -218,9 +218,9 @@ class Ls(Main):
 
     def start(self) -> None:
         f = format_prep(self.format)
-        print("PID\tName\tStatus\tElapsed\tCommand")
-        print("───\t────\t──────\t───────\t───────")
-        for d in Spawn().all():
+        print("Status  Elapsed  PID\tName, Command")
+        print("─────── ──────── ────── ────────────")
+        for d in Manager().all():
             print(f(d))
 
 
@@ -235,13 +235,13 @@ class Restart(Main):
         return super().init_argparse(argp)
 
     def start(self) -> None:
-        sp = Spawn()
+        sp = Manager()
         if self.ids:
             for proc in sp.find_names(self.ids, ambiguous, no_record):
                 # First kill existing process
                 Kill().main(["--remove", proc["name"]])
                 # Then restart with same parameters
-                Run().main(["--id", proc["name"], "-t", self.tail, *proc["cmd"]])
+                Run().main(["--id", proc["name"], "-t", self.tail, "--", *proc["cmd"]])
 
 
 class App(Main):

@@ -1,4 +1,3 @@
-# db.py
 import sqlite3
 from pathlib import Path
 from .spawn import Spawn
@@ -79,39 +78,6 @@ class ProcessDB(Spawn):
                     "started": row["started"],
                 }
 
-    # def get_process(self, name: str) -> Optional[Dict]:
-    #     """Fetch a process by name."""
-    #     with sqlite3.connect(self.db_path) as conn:
-    #         cursor = conn.execute(
-    #             "SELECT * FROM processes WHERE name = ? AND is_active = 1",
-    #             (name,),
-    #         )
-    #         row = cursor.fetchone()
-    #         if row:
-    #             return {
-    #                 "id": row[0],
-    #                 "pid": row[1],
-    #                 "name": row[2],
-    #                 "cmd": eval(row[3]),  # Convert JSON string back to list
-    #                 "stdout_path": row[4],
-    #                 "stderr_path": row[5],
-    #                 "started": row[6],
-    #             }
-    #     return None
-
-    # def kill_process(self, name: str) -> bool:
-    #     """Mark a process as inactive (killed)."""
-    #     with sqlite3.connect(self.db_path) as conn:
-    #         conn.execute(
-    #             "UPDATE processes SET is_active = 0 WHERE name = ?",
-    #             (name,),
-    #         )
-    #         return conn.total_changes > 0
-
-    # def cleanup(self) -> None:
-    #     """Remove all inactive processes."""
-    #     with sqlite3.connect(self.db_path) as conn:
-    #         conn.execute("DELETE FROM processes WHERE is_active = 0")
     def find_uuid(self, uuid: str):
         """Find a process by uuid"""
         with self.connect() as conn:
@@ -128,3 +94,12 @@ class ProcessDB(Spawn):
                     "err": row["err"],
                     "started": row["started"],
                 }
+
+    def drop(self, entry: dict[str, object], clean_up=True):
+        with self.connect() as conn:
+            conn.cursor().execute(
+                "DELETE FROM processes WHERE uuid = ?", (entry["uuid"],)
+            )
+            # print(f"Row with ID {entry["id"]} deleted successfully. {entry["name"]}")
+        super().drop(entry, clean_up)
+        assert self.find_uuid(entry["uuid"]) is None

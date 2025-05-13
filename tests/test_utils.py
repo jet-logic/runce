@@ -52,6 +52,8 @@ class TestUtils(TestCase):
         b = pdb.spawn(["cat", "-"], split=True, in_file=a["err"])
         self.assertEqual(Path(b["out"]).read_text(), "456", b["name"])
         self.assertEqual(Path(b["err"]).read_text(), "", b["name"])
+        pdb.drop(p)
+        pdb.drop(b)
 
 
 if __name__ == "__main__":

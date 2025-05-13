@@ -168,11 +168,6 @@ class TestLookMultiple(unittest.TestCase):
         self.assertEqual(self.not_found_calls, [])
 
     def test_uuid_to_phonetic_words(self):
-        # from uuid import uuid4
-
-        # u = uuid4()
-        # print(f"Original UUID: {u}")
-        # print(f"Phonetic words: {uuid_to_phonetic_words(u)}")
         print(generate_pseudowords(3, 3))
         print(generate_pseudowords(3, 3))
 

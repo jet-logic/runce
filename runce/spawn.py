@@ -93,8 +93,9 @@ class Spawn:
 
         process_info["base_name"] = base_name
         process_info["pid"] = Popen(cmd, **po_kwa).pid
-        # print("PI", process_info)
-        return self.add_process(process_info)
+        x = self.add_process(process_info)
+        # print("PI", x)
+        return x
 
     def add_process(self, process_info: dict[str, object]):
         """Insert a new process record."""
