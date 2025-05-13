@@ -47,10 +47,11 @@ runce run [options] ARG...
 **Options:**
 
 - `--id <run_id>`: Unique run identifier (required).
-- `--working-directory <cwd>`: Working directory for the command.
+- `--cwd <cwd>`: Working directory for the command.
 - `-t <tail>` / `--tail <tail>`: Tail the output (n lines). Use `-t -1` to print the entire output.
 - `--overwrite`: Overwrite existing entry if it exists.
 - `--run-after <command>`: Run a command after the main command finishes.
+- `--split` : Dont merge stdout and stderr
 
 **Example:**
 
@@ -176,23 +177,23 @@ runce restart my-unique-task
 runce run --id api-server -- python api.py
 ```
 
-### 2. Checking Running Processes
+### 2. Checking Live Processes
 
 ```bash
 $ runce list
 PID     NAME        STATUS      ELAPSED    COMMAND
-1234    api-server  ✅ Running  01:23:45   python api.py
-5678    worker      ❌ Stopped  00:45:30   python worker.py
+1234    api-server  ✅ Live  01:23:45   python api.py
+5678    worker      ❌ Gone  00:45:30   python worker.py
 ```
 
 ### 3. Preventing Duplicates
 
 ```bash
 $ runce run --id daily-job -- python daily.py
-🚀 Started: PID:5678(✅ Running) daily-job
+🚀 Started: PID:5678(✅ Live) daily-job
 
 $ runce run --id daily-job -- python daily.py
-🚨 Already running: PID:5678(✅ Running) daily-job
+🚨 Already running: PID:5678(✅ Live) daily-job
 ```
 
 ## Formats
@@ -201,7 +202,7 @@ The `-f` / `--format` option in the `ls` and `status` commands allows you to cus
 
 - `{pid}`: Process ID
 - `{name}`: Run ID / Name
-- `{pid_status}`: Process status ("✅ Running" or "👻 Absent")
+- `{pid_status}`: Process status ("✅ Live" or "👻 Gone")
 - `{elapsed}`: Elapsed time
 - `{command}`: The command being executed
 
