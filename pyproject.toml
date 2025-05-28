@@ -12,7 +12,6 @@ description = "Ensure only one instance of your process runs at a time."
 authors = [{name = "Jet-Logic"}]
 readme = "README.md"
 requires-python = ">=3.8"
-license = {text = "MIT"}
 classifiers = [
     "Operating System :: POSIX :: Linux",
     "Development Status :: 4 - Beta",

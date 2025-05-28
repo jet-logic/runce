@@ -1,8 +1,13 @@
+import os
 from pathlib import Path
+from signal import SIGINT
+import subprocess
+import tempfile
+from time import sleep
 from unittest import TestCase, main
 from runce.procdb import ProcessDB
 from runce.spawn import Spawn
-from runce.utils import slugify, get_base_name, look
+from runce.utils import kill_pid, slugify, get_base_name, look, tail_bytes
 
 
 class TestUtils(TestCase):
@@ -41,19 +46,65 @@ class TestUtils(TestCase):
         self.assertIs(look("citrus", db), None)
         self.assertIs(look("b", db), db[1])
 
+    def test_tail_bytes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            top = Path(tmp)
+            zero = top / "zero.txt"
+            zero.touch()
+
+            self.assertEqual(tail_bytes(str(zero), 1000), b"")
+            file = top / "file.txt"
+            file.write_bytes(b"content")
+            self.assertEqual(tail_bytes(str(file), 6), b"ontent")
+            self.assertEqual(tail_bytes(str(file), 8), b"content")
+            self.assertEqual(tail_bytes(str(file), 7), b"content")
+
     def test_spawn_echo(self):
         pdb = ProcessDB()
-        p = pdb.spawn(["bash", "-c", "echo -n 123; echo -n 456 >&2"], split=True)
+        kw = {}
+        # if os.name == "nt":
+        #     kw["creationflags"] = subprocess.CREATE_NO_WINDOW
+        p = pdb.spawn(
+            [
+                "python",
+                "-c",
+                'from sys import stderr, stdout; stdout.write("123"); stderr.write("456")',
+            ],
+            split=True,
+            **kw
+        )
+        sleep(1)
         a = pdb.find_name(p["name"])
+        o = Path(a["out"]).read_text()
+        e = Path(a["err"]).read_text()
+        k = kill_pid(p["pid"])
+        print(k, a)
         self.assertTrue(a)
-        self.assertEqual(Path(a["out"]).read_text(), "123")
-        self.assertEqual(Path(a["err"]).read_text(), "456")
+        self.assertEqual(o, "123")
+        self.assertRegex(e, r"\A456\W?\Z")
         self.assertIsNone(pdb.find_name("!@#"))
-        b = pdb.spawn(["cat", "-"], split=True, in_file=a["err"])
-        self.assertEqual(Path(b["out"]).read_text(), "456", b["name"])
-        self.assertEqual(Path(b["err"]).read_text(), "", b["name"])
+        b = pdb.spawn(
+            [
+                "python",
+                "-c",
+                "from sys import stdin, stdout; stdout.write(stdin.read())",
+            ],
+            split=True,
+            in_file=a["err"],
+            **kw
+        )
+        sleep(1)
         pdb.drop(p)
+        o = Path(b["out"]).read_text()
+        e = Path(b["err"]).read_text()
+        kill_pid(b["pid"])
+        # give time for process clean-up
+        # kill_pid always forcibly kill in windows
+        # avoids PermissionError: [WinError 32] The process cannot access the file...
+        sleep(1)
         pdb.drop(b)
+        self.assertEqual(e, "", b["name"])
+        self.assertRegex(o, r"\A456\W?\Z", b["name"])
 
 
 if __name__ == "__main__":

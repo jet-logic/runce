@@ -1,6 +1,10 @@
+import os
 import re
 import errno
 import hashlib
+import signal
+from sys import stderr
+from typing import List, Dict, Iterator, Callable, Any, Optional
 
 
 def slugify(value: str) -> str:
@@ -10,25 +14,76 @@ def slugify(value: str) -> str:
     return re.sub(r"[_-]+", "_", value).strip("_")
 
 
-def check_pid(pid: int) -> bool:
-    """Check if a Unix process exists."""
-    try:
-        from os import kill
+if os.name == "nt":  # Windows
+    import ctypes
 
-        kill(pid, 0)
-    except OSError as err:
-        if err.errno == errno.ESRCH:  # No such process
+    def check_pid(pid: int) -> bool:
+        """Properly checks if a process is running by verifying exit code."""
+        kernel32 = ctypes.windll.kernel32
+        PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+
+        # STILL_ACTIVE exit code (259)
+        STILL_ACTIVE = 0x103
+
+        handle = kernel32.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
+        if not handle:
             return False
-        elif err.errno == errno.EPERM:  # Process exists
+
+        try:
+            exit_code = ctypes.c_ulong()
+            if kernel32.GetExitCodeProcess(handle, ctypes.byref(exit_code)):
+                return exit_code.value == STILL_ACTIVE
+            return False
+        finally:
+            kernel32.CloseHandle(handle)
+
+    def kill_pid(
+        pid: int, sig: Optional[int] = None, process_group: Optional[bool] = None
+    ) -> bool:
+        try:
+            os.kill(pid, signal.SIGTERM if sig is None else sig)
+        except PermissionError as e:
+            if check_pid(pid) is False:
+                return False
+        except OSError as e:
+            if 87 == getattr(
+                e, "winerror", 0
+            ):  # ERROR_INVALID_PARAMETER (no such process)
+                return False
+            raise
+        return True
+
+else:
+
+    def check_pid(pid: int) -> bool:
+        """Check if a Unix process exists."""
+        try:
+            from os import kill
+
+            kill(pid, 0)
+        except OSError as err:
+            if err.errno == errno.ESRCH:  # No such process
+                return False
+            elif err.errno == errno.EPERM:  # Process exists
+                return True
+            raise
+        return True
+
+    def kill_pid(
+        pid: int,
+        sig: Optional[int] = signal.SIGTERM,
+        process_group: Optional[bool] = None,
+    ) -> bool:
+        try:
+            if process_group:
+                os.killpg(pid, sig)
+            else:
+                os.kill(pid, sig)
             return True
-        raise
-    return True
-
-
-# windows
-# import psutil
-# def pid_exists(pid):
-#     return psutil.pid_exists(pid)
+        except OSError as e:
+            if e.errno == errno.ESRCH:  # No such process/group
+                return False
+            raise
 
 
 def get_base_name(name: str) -> str:
@@ -39,112 +94,6 @@ def get_base_name(name: str) -> str:
 
 
 import random
-
-
-def uuid_to_phonetic_words(uuid_obj, word_count=4):
-    """Generate phonetic pseudowords from UUID"""
-    # Phoneme categories
-    onsets = [
-        "bl",
-        "br",
-        "cl",
-        "cr",
-        "dr",
-        "fl",
-        "fr",
-        "gl",
-        "gr",
-        "pl",
-        "pr",
-        "sc",
-        "sh",
-        "sk",
-        "sl",
-        "sm",
-        "sn",
-        "sp",
-        "st",
-        "sw",
-        "th",
-        "tr",
-        "tw",
-        "wh",
-        "wr",
-    ]
-    vowels = [
-        "a",
-        "e",
-        "i",
-        "o",
-        "u",
-        "ai",
-        "au",
-        "aw",
-        "ay",
-        "ea",
-        "ee",
-        "ei",
-        "eu",
-        "ew",
-        "ey",
-        "ie",
-        "oa",
-        "oi",
-        "oo",
-        "ou",
-        "ow",
-        "oy",
-    ]
-    codas = [
-        "ct",
-        "ft",
-        "ld",
-        "lf",
-        "lk",
-        "lm",
-        "lp",
-        "lt",
-        "mp",
-        "nd",
-        "ng",
-        "nk",
-        "nt",
-        "pt",
-        "rb",
-        "rd",
-        "rf",
-        "rg",
-        "rk",
-        "rl",
-        "rm",
-        "rn",
-        "rp",
-        "rt",
-        "rv",
-        "sk",
-        "sp",
-        "ss",
-        "st",
-        "tt",
-    ]
-
-    random.seed(uuid_obj.int)
-    words = []
-    for _ in range(word_count):
-        # Build syllable: onset + vowel + coda
-        syllable = random.choice(onsets) if random.random() > 0.3 else ""
-        syllable += random.choice(vowels)
-        syllable += random.choice(codas) if random.random() > 0.5 else ""
-
-        # Sometimes add a second syllable
-        if random.random() > 0.7:
-            syllable += random.choice(vowels) + (
-                random.choice(codas) if random.random() > 0.5 else ""
-            )
-
-        words.append(syllable)
-
-    return "-".join(words)
 
 
 def look(id: str, runs: list[dict[str, object]]):
@@ -158,9 +107,6 @@ def look(id: str, runs: list[dict[str, object]]):
                 return False  # more than one partial match
             m = x
     return m
-
-
-from typing import List, Dict, Iterator, Callable, Any
 
 
 def look_multiple(
@@ -213,3 +159,50 @@ def generate_pseudowords(word_count=4, syllables_per_word=2):
         words.append("".join(word))
 
     return "-".join(words)
+
+
+def tail_file(filename="", n=10):
+    """Efficiently reads last 'n' lines (like Unix 'tail')."""
+    with open(filename, "rb") as f:
+        # Seek to end, then step backwards to find line breaks
+        f.seek(0, 2)  # Move to EOF
+        end = f.tell()  # Get EOF position
+        line_count = 0
+        pos = end - 1  # Start at last byte
+
+        while pos >= 0 and line_count < n:
+            f.seek(pos)
+            char = f.read(1)
+            if char == b"\n":
+                line_count += 1
+            pos -= 1
+
+        f.seek(pos + 2)  # Rewind to start of last line
+        return f.read().splitlines()[-n:]
+
+
+def filesizepu(s: str) -> tuple[int, str]:
+    u = ""
+    if s[0].isnumeric():
+        q = s.lower()
+        if q.endswith("b"):
+            q, u = q[0:-1], q[-1]
+        for i, v in enumerate("kmgtpezy"):
+            if q[-1].endswith(v):
+                return int(float(q[0:-1]) * (2 ** (10 * (i + 1)))), v
+        return int(q), u
+    return int(s), u
+
+
+def tail_bytes(filename: str, num_bytes: int):
+    # print("tail_bytes", filename, num_bytes, open(filename, "rb").read(), file=stderr)
+    with open(filename, "rb") as f:
+        # Seek to the end of the file, then back `num_bytes` (or start of file)
+        f.seek(0, 2)  # 2 means seek relative to the end
+        file_size = f.tell()
+        if file_size < num_bytes:
+            f.seek(0)  # If file is smaller than num_bytes, read entire file
+            return f.read()
+        else:
+            f.seek(-num_bytes, 2)  # Seek backwards `num_bytes` from end
+            return f.read(num_bytes)

@@ -3,8 +3,8 @@ NAME=runce
 DOCS=/tmp/"$NAME"_coverage
 export COVERAGE_FILE=/tmp/."$NAME"_coverage
 echo [$NAME] $DOCS
-rm -vf "$COVERAGE_FILE"*
-rm -vrf $DOCS
+rm -f "$COVERAGE_FILE"*
+rm -rf $DOCS
 
 # Run tests with coverage
 python -m pytest tests/ \
