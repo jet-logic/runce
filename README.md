@@ -47,10 +47,11 @@ runce run [options] ARG...
 **Options:**
 
 - `--id <run_id>`: Unique run identifier (required).
-- `--working-directory <cwd>`: Working directory for the command.
+- `--cwd <cwd>`: Working directory for the command.
 - `-t <tail>` / `--tail <tail>`: Tail the output (n lines). Use `-t -1` to print the entire output.
 - `--overwrite`: Overwrite existing entry if it exists.
 - `--run-after <command>`: Run a command after the main command finishes.
+- `--split` : Dont merge stdout and stderr
 
 **Example:**
 

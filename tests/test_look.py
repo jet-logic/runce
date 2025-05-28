@@ -1,7 +1,6 @@
 import unittest
-from typing import List, Dict, Any
 
-from runce.utils import generate_pseudowords, look_multiple, uuid_to_phonetic_words
+from runce.utils import generate_pseudowords, look_multiple
 
 
 class TestLookMultiple(unittest.TestCase):
