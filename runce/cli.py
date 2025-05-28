@@ -225,11 +225,11 @@ class Run(Main):
             s = ["🚀", r"Started: PID={pid} ({pid_status}) {name}"]
         assert e
         try:
-            print(f"{s[0]} ", end="")
+            print(f"{s[0]} ", end="", file=stderr)
         except UnicodeEncodeError:
             pass
         hf = format_prep(s[1])
-        print(hf(e), file=stderr)
+        print(hf(e), file=stderr, flush=True)
 
         # Handle tail output
         if self.tail:

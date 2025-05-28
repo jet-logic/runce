@@ -61,11 +61,9 @@ class TestUtils(TestCase):
 
     def test_spawn_echo(self):
         pdb = ProcessDB()
-        if os.name == "nt":
-            kw = {"creationflags": subprocess.CREATE_NO_WINDOW}
-        else:
-            kw = {}
-
+        kw = {}
+        # if os.name == "nt":
+        #     kw["creationflags"] = subprocess.CREATE_NO_WINDOW
         p = pdb.spawn(
             [
                 "python",
@@ -75,8 +73,7 @@ class TestUtils(TestCase):
             split=True,
             **kw
         )
-
-        sleep(2)
+        sleep(1)
         a = pdb.find_name(p["name"])
         o = Path(a["out"]).read_text()
         e = Path(a["err"]).read_text()
@@ -96,11 +93,15 @@ class TestUtils(TestCase):
             in_file=a["err"],
             **kw
         )
+        sleep(1)
         pdb.drop(p)
-        sleep(2)
         o = Path(b["out"]).read_text()
         e = Path(b["err"]).read_text()
         kill_pid(b["pid"])
+        # give time for process clean-up
+        # kill_pid always forcibly kill in windows
+        # avoids PermissionError: [WinError 32] The process cannot access the file...
+        sleep(1)
         pdb.drop(b)
         self.assertEqual(e, "", b["name"])
         self.assertRegex(o, r"\A456\W?\Z", b["name"])

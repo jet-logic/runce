@@ -8,18 +8,6 @@ from typing import Optional
 from subprocess import Popen, run
 
 
-# Functions to test (copied from your code)
-# def check_pid(pid: int) -> bool:
-#     kernel32 = ctypes.windll.kernel32
-#     PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
-#     process = kernel32.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
-#     if process:
-#         kernel32.G
-#         kernel32.CloseHandle(process)
-#         return True
-#     return False
-
-
 def check_pid(pid: int) -> bool:
     """Properly checks if a process is running by verifying exit code."""
     kernel32 = ctypes.windll.kernel32
@@ -76,7 +64,7 @@ def check_pid(pid: int) -> bool:
 #     return True
 
 
-def kill_pid(
+def kill_pid_2(
     pid: int, sig: Optional[int] = None, process_group: Optional[bool] = None
 ) -> bool:
     """
@@ -129,11 +117,29 @@ def kill_pid(
         kernel32.CloseHandle(handle)
 
 
+def kill_pid_3(
+    pid: int, sig: Optional[int] = None, process_group: Optional[bool] = None
+) -> bool:
+    try:
+        os.kill(pid, signal.SIGTERM if sig is None else sig)
+    except PermissionError as e:
+        if check_pid(pid) is False:
+            return False
+    except OSError as e:
+        if 87 == getattr(e, "winerror", 0):  # ERROR_INVALID_PARAMETER (no such process)
+            return False
+        raise
+    return True
+
+
 def task_kill(pid):
     cp = run(["taskkill", "/PID", str(pid), "/F"])
     if cp.returncode == 128:
         return False
     assert cp.returncode == 0
+
+
+kill_pid = kill_pid_3
 
 
 class TestPidUtilsWindows(unittest.TestCase):
@@ -178,7 +184,7 @@ class TestPidUtilsWindows(unittest.TestCase):
         self.assertFalse(check_pid(victim_proc.pid), f"check_pid {victim_proc.pid}")
 
         # Test killing non-existent process
-        self.assertFalse(kill_pid(999999), f"kill_pid {victim_proc.pid}")
+        self.assertFalse(kill_pid(999999), f"kill_pid {999999}")
 
     def test_kill_already_dead(self):
         """Test killing a process that just exited"""

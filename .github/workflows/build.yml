@@ -33,8 +33,6 @@ jobs:
             echo "Version mismatch!"
             exit 1
           fi
-    # - name: Upload coverage to Codecov
-    #   uses: codecov/codecov-action@v3
 
   Windows:
     runs-on: windows-latest
@@ -71,4 +69,4 @@ jobs:
       #   continue-on-error: true
 
       - name: Run tests
-        run: python -m pytest -s
+        run: python -m pytest
