@@ -37,7 +37,7 @@ class Spawn:
 
     def spawn(
         self,
-        cmd: list[str] = [],
+        cmd: "list[str]" = [],
         name: str = "",
         split: bool = False,
         overwrite: bool = False,
@@ -97,7 +97,7 @@ class Spawn:
         # print("PI", x)
         return x
 
-    def add_process(self, process_info: dict[str, object]):
+    def add_process(self, process_info: "dict[str, object]"):
         """Insert a new process record."""
         # print(process_info)
         run_file = self.data_dir / f"{process_info['base_name']}.run.json"
@@ -132,7 +132,7 @@ class Spawn:
                 return x
         return None
 
-    def drop(self, entry: dict[str, object], clean_up=True):
+    def drop(self, entry: "dict[str, object]", clean_up=True):
         """Clean up files associated with a process."""
         from os.path import isfile
         from os import remove
@@ -144,7 +144,7 @@ class Spawn:
                     remove(v)
 
     def find_names(
-        self, names: list[str], ambiguous=lambda x: None, not_found=lambda x: None
+        self, names: "list[str]", ambiguous=lambda x: None, not_found=lambda x: None
     ):
         if names:
             yield from look_multiple(names, self.all(), ambiguous, not_found)
