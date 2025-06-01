@@ -96,7 +96,7 @@ def get_base_name(name: str) -> str:
 import random
 
 
-def look(id: str, runs: list[dict[str, object]]):
+def look(id: str, runs: "list[dict[str, object]]"):
     """Find by 'name' or partial match."""
     m = None
     for x in runs:
@@ -110,10 +110,10 @@ def look(id: str, runs: list[dict[str, object]]):
 
 
 def look_multiple(
-    ids: List[str],
-    runs: List[Dict[str, Any]],
-    ambiguous: Callable[[str], Any] = lambda x: None,
-    not_found: Callable[[str], Any] = lambda x: None,
+    ids: "list[str]",
+    runs: "list[dict[str, Any]]",
+    ambiguous: "Callable[[str], Any]" = lambda x: None,
+    not_found: "Callable[[str], Any]" = lambda x: None,
 ) -> Iterator[Dict[str, Any]]:
     map_ids = dict([(id, ([], [])) for id in ids])
     for item in runs:

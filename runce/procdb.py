@@ -34,10 +34,7 @@ class ProcessDB(Spawn):
     def connect(self):
         return sqlite3.connect(self.db_path)
 
-    def add_process(
-        self,
-        process_info: dict[str, object],
-    ):
+    def add_process(self, process_info: "dict[str, object]"):
         """Insert a new process record."""
         with self.connect() as conn:
             conn.execute(

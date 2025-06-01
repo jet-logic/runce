@@ -1,4 +1,4 @@
-name: Python CI
+name: Tests
 
 on:
   push:
@@ -14,7 +14,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: "3.10"
+          python-version: "3.8"
 
       - name: Install dependencies
         run: |
@@ -50,23 +50,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install pytest pytest-cov toml
           pip install -e .
-
-      # - name: Prep tests
-      #   env:
-      #     TARGET: runce
-      #   run: python tests/remove_emojis.py
-
-      # - name: Run tests/test_windows.py
-      #   run: python tests/test_windows.py
-      #   continue-on-error: true
-
-      # - name: Run tests/test_utils.py
-      #   run: python tests/test_utils.py
-      #   continue-on-error: true
-
-      # - name: Run tests/test_cli.py
-      #   run: python tests/test_cli.py
-      #   continue-on-error: true
 
       - name: Run tests
         run: python -m pytest
