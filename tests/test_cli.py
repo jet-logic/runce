@@ -21,7 +21,7 @@ class TestUtils(TestCase):
         # Combine stdout and stderr for verification
         return o
 
-    def assertRegexInListOnce(self, regex: str, ls: list[str]):
+    def assertRegexInListOnce(self, regex: str, ls: "list[str]"):
         b = [1 for x in ls if re.search(regex, x)]
         self.assertEqual(len(b), 1, f"{regex} in {ls!r}")
 
@@ -31,12 +31,9 @@ class TestUtils(TestCase):
             "--split",
             "--",
             "python",
-            "-c"
-            'from sys import stderr, stdout; stdout.write("123"); stderr.write("456")',
+            "-c" 'from sys import stderr, stdout; stdout.write("123"); stderr.write("456")',
         )
-        m = re.search(
-            r"(?mx) (?:\W+|\A) Started: \W+ [^\)]+ \s+ \( [^\)]+ \) \s+ (.+)", o
-        )
+        m = re.search(r"(?mx) (?:\W+|\A) Started: \W+ [^\)]+ \s+ \( [^\)]+ \) \s+ (.+)", o)
         self.assertTrue(m)
         n = m.group(1)
         self.assertTrue(n)
@@ -82,9 +79,7 @@ class TestUtils(TestCase):
             print("check_pid", pid)
             sleep(1)
         o = self.run_runce("kill", "carrot")
-        self.assertRegex(
-            o, r"(?xim) (?:\W+|\A) no \W+ process \W+ .+ \W+ carrot (\W+|\Z)"
-        )
+        self.assertRegex(o, r"(?xim) (?:\W+|\A) no \W+ process \W+ .+ \W+ carrot (\W+|\Z)")
         o = self.run_runce("clean", "carrot")
 
     def test_tail(self):
@@ -103,15 +98,11 @@ class TestUtils(TestCase):
         self.assertRegex(o, r"(?xim) QRST \W+ UVWX \W+ YZ \W+ \Z")
 
         o = self.run_runce("kill", "--remove", "tomato")
-        self.assertRegex(
-            o, r"(?xim) (?:\W+|\A) (?:killed|no\s+process) .+ \W+ tomato \W+"
-        )
+        self.assertRegex(o, r"(?xim) (?:\W+|\A) (?:killed|no\s+process) .+ \W+ tomato \W+")
 
     def test_cli(self):
 
-        o = self.run_runce(
-            "run", "--id", "apple", "--", "python", "tests/echo.py", "apple"
-        )
+        o = self.run_runce("run", "--id", "apple", "--", "python", "tests/echo.py", "apple")
 
         self.assertRegex(o, r"(?xim) (?:\W+|\A) started: \W+ .+ \W+ apple \W+")
 
@@ -128,16 +119,14 @@ class TestUtils(TestCase):
         )
         self.assertRegex(o, r"(?xim) (?:\W+|\A) started: \W+ .+ \W+ banana \W+")
 
-        o = self.run_runce(
-            "run", "--id", "pineapple", "--", "python", "tests/echo.py", "pineapple"
-        )
+        o = self.run_runce("run", "--id", "pineapple", "--", "python", "tests/echo.py", "pineapple")
         self.assertRegex(o, r"(?xim) (?:\W+|\A) started: \W+ .+ \W+ pineapple \W+")
 
         a = [x for x in self.run_runce("status").strip().splitlines()]
 
-        self.assertRegexInListOnce(r"(?xi) \W* run\w+ \W+ .+ \W+ apple \W+", a)
-        self.assertRegexInListOnce(r"(?xi) \W* run\w+ \W+ .+ \W+ pineapple \W+", a)
-        self.assertRegexInListOnce(r"(?xi) \W* run\w+ \W+ .+ \W+ banana \W+", a)
+        self.assertRegexInListOnce(r"(?xi) \W* live \W+ .+ \W+ apple \W+", a)
+        self.assertRegexInListOnce(r"(?xi) \W* live \W+ .+ \W+ pineapple \W+", a)
+        self.assertRegexInListOnce(r"(?xi) \W* live \W+ .+ \W+ banana \W+", a)
 
         o = self.run_runce("tail", "--header", "no", "-n", "1k", "pineapple")
         self.assertRegex(o, r"(?xim) \W* pineapple \W+ \d+ \W+")
@@ -157,19 +146,15 @@ class TestUtils(TestCase):
         self.assertRegex(o, r"(?xim) killed .+ \W+ apple \W+")
 
         a = self.run_runce("kill", "lemon", "banana").strip().splitlines()
-        self.assertRegexInListOnce(
-            r"(?xi) (?:\W+|\A) no \s+ record .+ \W+ lemon \W+", a
-        )
+        self.assertRegexInListOnce(r"(?xi) (?:\W+|\A) no \s+ record .+ \W+ lemon \W+", a)
         self.assertRegexInListOnce(r"(?xi)(?:\W+|\A) killed .+ \W+ banana \W+", a)
 
         o = self.run_runce("restart", "banana")
 
         a = self.run_runce("status").strip().splitlines()
-        self.assertRegexInListOnce(
-            r"(?xi) (?:\W+|\A) run\w+ \W+ .+ \W+ pineapple \W+", a
-        )
-        self.assertRegexInListOnce(r"(?xi) (?:\W+|\A) run\w+ \W+ .+ \W+ banana \W+", a)
-        self.assertRegexInListOnce(r"(?xi) (?:\W+|\A) stop\w+ \W+ .+ \W+ apple \W+", a)
+        self.assertRegexInListOnce(r"(?xi) (?:\W+|\A) live \W+ .+ \W+ pineapple \W+", a)
+        self.assertRegexInListOnce(r"(?xi) (?:\W+|\A) live \W+ .+ \W+ banana \W+", a)
+        self.assertRegexInListOnce(r"(?xi) (?:\W+|\A) done \W+ .+ \W+ apple \W+", a)
 
         self.assertRegex(
             self.run_runce("clean", "apple"),

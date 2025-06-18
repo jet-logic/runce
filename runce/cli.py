@@ -1,11 +1,9 @@
 from argparse import ArgumentParser
 from shlex import join
-from sys import stderr, stdout
-from shutil import copyfileobj
+from sys import stderr, stdout, platform
 from subprocess import Popen, PIPE, run
-import sys
-from typing import Dict, Any
-from .utils import check_pid, filesizepu, kill_pid, tail_bytes, tail_file
+from typing import Any
+from .utils import check_pid, filesizepu, kill_pid, tail_bytes
 from .main import Main, flag, arg
 from .procdb import ProcessDB as Manager
 
@@ -25,13 +23,13 @@ class FormatDict(dict):
                 return self["cmd"]
             return join(self["cmd"])
         elif key == "pid_status":
-            return "Running" if check_pid(self["pid"]) else "Stopped"
+            return "Live" if check_pid(self["pid"]) else "Done"
         raise KeyError(f"No {key!r}")
 
 
 def format_prep(f: str):
 
-    def fn(x: Dict[str, Any]) -> str:
+    def fn(x: "dict[str, Any]") -> str:
         return f.format_map(FormatDict(x))
 
     return fn
@@ -56,7 +54,7 @@ def ambiguous(name):
 class Clean(Main):
     """Clean up dead processes."""
 
-    ids: list[str] = arg("ID", "run ids", nargs="*")
+    ids: "list[str]" = arg("ID", "run ids", nargs="*")
 
     def add_arguments(self, argp: ArgumentParser) -> None:
         argp.description = "Clean up entries for non-existing processes"
@@ -78,7 +76,7 @@ class Clean(Main):
 class Status(Main):
     """Check process status."""
 
-    ids: list[str] = arg("ID", "run ids", nargs="*")
+    ids: "list[str]" = arg("ID", "run ids", nargs="*")
     format: str = flag(
         "f",
         "format of entry line",
@@ -99,7 +97,7 @@ class Status(Main):
 class Kill(Main):
     """Kill running processes."""
 
-    ids: list[str] = arg("ID", "run ids", nargs="+")
+    ids: "list[str]" = arg("ID", "run ids", nargs="+")
     dry_run: bool = flag("dry-run", "dry run (don't actually kill)", default=False)
     remove: bool = flag("remove", "remove entry after killing", default=False)
     group: bool = flag("group", "kill process group", default=False)
@@ -139,7 +137,7 @@ def _tail(n: float, u="", out="", tab=None):
     if u:
         stdout.buffer.write(tail_bytes(out, int(n)))
     elif n > 0:
-        if sys.platform.startswith("win"):
+        if platform.startswith("win"):
             cmd = [
                 "powershell",
                 "-c",
@@ -158,19 +156,16 @@ def _tail(n: float, u="", out="", tab=None):
 class Tail(Main):
     """Tail process output."""
 
-    ids: list[str] = arg("ID", "run ids", nargs="*")
+    ids: "list[str]" = arg("ID", "run ids", nargs="*")
     format: str = flag("header", "header format")
     lines: str = flag("n", "lines", "how many lines or bytes")
-    existing: bool = flag(
-        "x", "only-existing", "only show existing processes", default=False
-    )
+    existing: bool = flag("x", "only-existing", "only show existing processes", default=False)
     tab: bool = flag("t", "tab", "prefix tab space", default=False)
     err: bool = flag("e", "err", "output stderr", default=False)
     p_open: str = "=== "
     p_close: str = " ==="
 
     def start(self) -> None:
-        import sys
 
         if self.format == "no":
             hf = None
@@ -194,7 +189,7 @@ class Tail(Main):
 class Run(Main):
     """Run a new singleton process."""
 
-    args: list[str] = arg("ARG", nargs="*", metavar="arg")
+    args: "list[str]" = arg("ARG", nargs="*", metavar="arg")
     tail: int = flag("t", "tail", "tail the output with n lines", default=0)
     run_id: str = flag("id", "Unique run identifier", default="")
     cwd: str = flag("Working directory for the command")
@@ -219,9 +214,7 @@ class Run(Main):
             s = ["🚨", r"Found: PID={pid} ({pid_status}) {name}"]
         else:
             # Start new process
-            e = sp.spawn(
-                args, name, overwrite=self.overwrite, cwd=self.cwd, split=self.split
-            )
+            e = sp.spawn(args, name, overwrite=self.overwrite, cwd=self.cwd, split=self.split)
             s = ["🚀", r"Started: PID={pid} ({pid_status}) {name}"]
         assert e
         try:
@@ -271,7 +264,7 @@ class Ls(Main):
 class Restart(Main):
     """Restart a process."""
 
-    ids: list[str] = arg("ID", "run ids", nargs="+")
+    ids: "list[str]" = arg("ID", "run ids", nargs="+")
     tail: int = flag("t", "tail", "tail the output with n lines", default=0)
 
     def init_argparse(self, argp: ArgumentParser) -> None:
@@ -294,8 +287,7 @@ class App(Main):
     def init_argparse(self, argp: ArgumentParser) -> None:
         argp.prog = "runce"
         argp.description = (
-            "Runce (Run Once) - Ensures commands run exactly once.\n"
-            "Guarantees singleton execution per unique ID."
+            "Runce (Run Once) - Ensures commands run exactly once.\n" "Guarantees singleton execution per unique ID."
         )
         return super().init_argparse(argp)
 
