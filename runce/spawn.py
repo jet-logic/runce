@@ -75,15 +75,15 @@ class Spawn:
             so = se = Path(out_file) if out_file else data_dir / f"{base_name}.log"
             po_kwa["stdout"] = so.open(f"{mode}b")
             po_kwa["stderr"] = STDOUT
-        # if po_kwa.get("stdin") is None:
-        #     from sys import stdin
+        if po_kwa.get("stdin") is None:
+            from sys import stdin
 
-        #     try:
-        #         no = stdin.buffer.fileno()
-        #     except Exception as ex:
-        #         pass
-        #     else:
-        #         po_kwa["stdin"] = stdin.buffer
+            try:
+                no = stdin.buffer.fileno()
+            except Exception as ex:
+                pass
+            else:
+                po_kwa["stdin"] = stdin.buffer
 
         po_kwa.setdefault("start_new_session", True)
         po_kwa.setdefault("close_fds", True)
