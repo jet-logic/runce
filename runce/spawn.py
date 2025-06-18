@@ -2,7 +2,7 @@ import logging
 from json import dump, load
 from uuid import uuid4
 from pathlib import Path
-from subprocess import DEVNULL, STDOUT, Popen
+from subprocess import DEVNULL, PIPE, STDOUT, Popen
 from time import time
 from .utils import generate_pseudowords, get_base_name, look_multiple
 
@@ -23,9 +23,7 @@ class Spawn:
         try:
             m = super().__getattr__
         except AttributeError:
-            raise AttributeError(
-                f"{self.__class__.__name__} has no attribute {name}"
-            ) from None
+            raise AttributeError(f"{self.__class__.__name__} has no attribute {name}") from None
         else:
             return m(name)
 
@@ -77,7 +75,10 @@ class Spawn:
             so = se = Path(out_file) if out_file else data_dir / f"{base_name}.log"
             po_kwa["stdout"] = so.open(f"{mode}b")
             po_kwa["stderr"] = STDOUT
+        if po_kwa.get("stdin") is None:
+            from sys import stdin
 
+            po_kwa["stdin"] = stdin.buffer
         po_kwa.setdefault("start_new_session", True)
         po_kwa.setdefault("close_fds", True)
         po_kwa.setdefault("stdin", DEVNULL)
@@ -112,11 +113,7 @@ class Spawn:
             return
 
         for child in self.data_dir.iterdir():
-            if (
-                child.is_file()
-                and child.name.endswith(".run.json")
-                and child.stat().st_size > 0
-            ):
+            if child.is_file() and child.name.endswith(".run.json") and child.stat().st_size > 0:
                 try:
                     with child.open() as f:
                         d: dict[str, int | str] = load(f)
@@ -143,9 +140,7 @@ class Spawn:
                 if clean_up or k == "file":
                     remove(v)
 
-    def find_names(
-        self, names: "list[str]", ambiguous=lambda x: None, not_found=lambda x: None
-    ):
+    def find_names(self, names: "list[str]", ambiguous=lambda x: None, not_found=lambda x: None):
         if names:
             yield from look_multiple(names, self.all(), ambiguous, not_found)
         else:

@@ -21,7 +21,7 @@ class TestUtils(TestCase):
         # Combine stdout and stderr for verification
         return o
 
-    def assertRegexInListOnce(self, regex: str, ls: list[str]):
+    def assertRegexInListOnce(self, regex: str, ls: 'list[str]'):
         b = [1 for x in ls if re.search(regex, x)]
         self.assertEqual(len(b), 1, f"{regex} in {ls!r}")
 
