@@ -78,7 +78,13 @@ class Spawn:
         if po_kwa.get("stdin") is None:
             from sys import stdin
 
-            po_kwa["stdin"] = stdin.buffer
+            try:
+                no = stdin.buffer.fileno()
+            except Exception as ex:
+                pass
+            else:
+                po_kwa["stdin"] = stdin.buffer
+
         po_kwa.setdefault("start_new_session", True)
         po_kwa.setdefault("close_fds", True)
         po_kwa.setdefault("stdin", DEVNULL)
