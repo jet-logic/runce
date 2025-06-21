@@ -37,18 +37,14 @@ if os.name == "nt":  # Windows
         finally:
             kernel32.CloseHandle(handle)
 
-    def kill_pid(
-        pid: int, sig: Optional[int] = None, process_group: Optional[bool] = None
-    ) -> bool:
+    def kill_pid(pid: int, sig: Optional[int] = None, process_group: Optional[bool] = None) -> bool:
         try:
             os.kill(pid, signal.SIGTERM if sig is None else sig)
         except PermissionError as e:
             if check_pid(pid) is False:
                 return False
         except OSError as e:
-            if 87 == getattr(
-                e, "winerror", 0
-            ):  # ERROR_INVALID_PARAMETER (no such process)
+            if 87 == getattr(e, "winerror", 0):  # ERROR_INVALID_PARAMETER (no such process)
                 return False
             raise
         return True
@@ -183,7 +179,7 @@ def tail_file(filename="", n=10):
 
 def filesizepu(s: str) -> tuple[int, str]:
     u = ""
-    if s[0].isnumeric():
+    if s[0].isnumeric() or s[0].startswith("."):
         q = s.lower()
         if q.endswith("b"):
             q, u = q[0:-1], q[-1]
