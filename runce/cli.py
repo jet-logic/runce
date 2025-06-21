@@ -202,6 +202,7 @@ class Run(Main):
     overwrite: bool = flag("overwrite", "Overwrite existing entry", default=False)
     cmd_after: str = flag("run-after", "Run command after", metavar="command")
     split: bool = flag("split", "Dont merge stdout and stderr", default=False)
+    input: str = flag("i", "input", "pass FILE to stdin", metavar="FILE", default="")
 
     def start(self) -> None:
         args = self.args
@@ -214,7 +215,7 @@ class Run(Main):
             s = ["🚨", r"Found: PID={pid} ({pid_status}) {name}"]
         else:
             # Start new process
-            e = sp.spawn(args, name, overwrite=self.overwrite, cwd=self.cwd, split=self.split)
+            e = sp.spawn(args, name, overwrite=self.overwrite, cwd=self.cwd, split=self.split, in_file=self.input)
             s = ["🚀", r"Started: PID={pid} ({pid_status}) {name}"]
         assert e
         try:
@@ -254,8 +255,8 @@ class Ls(Main):
             pass
         else:
             f = "{pid_status} {elapsed} {pid}\t{name}, {command}"
-            print("Status  Elapsed  PID\tName, Command")
-            print("------- -------- ------ ------------")
+            print("Stat Elapsed  PID\tName, Command")
+            print("---- -------- ------ ------------")
         fp = format_prep(f)
         for d in Manager().all():
             print(fp(d))
