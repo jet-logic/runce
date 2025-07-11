@@ -214,7 +214,6 @@ class Run(Main):
         if e:
             s = ["🚨", r"Found: PID={pid} ({pid_status}) {name}"]
         else:
-            
             # Start new process
             e = sp.spawn(args, name, overwrite=self.overwrite, cwd=self.cwd, split=self.split, in_file=self.input)
             s = ["🚀", r"Started: PID={pid} ({pid_status}) {name}"]

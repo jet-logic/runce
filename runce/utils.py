@@ -119,6 +119,9 @@ def look_multiple(
                 exact.append(item)
             elif id in name:
                 partial.append(item)
+            elif id.isdigit():
+                if item["pid"] == int(id):
+                    exact.append(item)
     for id, (exact, partial) in map_ids.items():
         if exact:
             if len(exact) > 1:
